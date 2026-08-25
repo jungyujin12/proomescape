@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="consent.css">
   <link rel="stylesheet" href="mobile-fixes.css">
   <link rel="stylesheet" href="admin-complete.css">
+  <link rel="stylesheet" href="admin-edit.css">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -81,10 +82,20 @@
           <div class="section-heading"><p>NOTICE</p><h2>참가 안내</h2></div>
           <ol class="rules">
             <li><span>01</span><p><b>예약 시간 5분 전 도착</b>늦을 경우 다음 팀을 위해 참여 시간이 줄어들 수 있어요.</p></li>
-            <li><span>02</span><p><b>힌트는 최대 3회</b>막히면 운영 요원에게 손을 들어 요청해 주세요.</p></li>
-            <li><span>03</span><p><b>내부 촬영 및 스포일러 금지</b>모두가 즐길 수 있도록 비밀을 지켜주세요.</p></li>
+            <li><span>02</span><p><b>내부 촬영 및 스포일러 금지</b>모두가 즐길 수 있도록 비밀을 지켜주세요.</p></li>
           </ol>
           <div class="warning">⚠ 공포 요소와 어두운 공간이 포함되어 있습니다.</div>
+          <section class="guest-cancel" aria-labelledby="guestCancelTitle">
+            <p class="eyebrow-text">CANCEL RESERVATION</p>
+            <h3 id="guestCancelTitle">예약 취소</h3>
+            <p>신청할 때 입력한 전화번호로 예약을 확인하고 취소할 수 있습니다.</p>
+            <form id="guestCancelForm">
+              <label>전화번호<input id="cancelPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" required></label>
+              <button type="submit" class="outline-btn">내 예약 확인</button>
+            </form>
+            <p id="cancelError" class="form-error" role="alert"></p>
+            <div id="cancelResults" class="cancel-results" aria-live="polite"></div>
+          </section>
         </aside>
       </div>
     </section>
@@ -151,8 +162,9 @@
     </div>
   </div>
   <div id="signatureModal" class="modal" hidden><div class="modal-card signature-review" role="dialog" aria-modal="true" aria-labelledby="signatureTitle"><p class="eyebrow-text">CONSENT RECORD</p><h2 id="signatureTitle">동의 서명 확인</h2><b>개인정보 수집·이용 동의</b><img id="privacySignatureImage" alt="개인정보 동의 서명"><b>안전수칙 확인 및 동의</b><img id="safetySignatureImage" alt="안전수칙 동의 서명"><button id="closeSignatureModal" class="primary-btn">닫기</button></div></div>
+  <div id="editModal" class="modal" hidden><div class="modal-card edit-reservation" role="dialog" aria-modal="true" aria-labelledby="editTitle"><p class="eyebrow-text">EDIT RESERVATION</p><h2 id="editTitle">예약 정보 수정</h2><form id="editForm"><input id="editId" type="hidden"><div class="field-row"><label>이름<input id="editLeader" required maxlength="12"></label><label>전화번호<input id="editPhone" required></label></div><div class="field-row"><label>학번<input id="editStudentId" maxlength="12"></label><label>학과<input id="editDepartment" maxlength="30"></label></div><div class="field-row"><label>학년<select id="editGrade"><option value="">해당 없음</option><option>1학년</option><option>2학년</option><option>3학년</option><option>4학년</option><option>5학년 이상</option></select></label><label>상태<select id="editStatus"><option>예약</option><option>입장</option><option>완료</option><option>취소</option></select></label></div><div class="field-row"><label>예약 날짜<select id="editDate"></select></label><label>예약 시간<select id="editTime"></select></label></div><p id="editError" class="form-error"></p><div class="modal-actions"><button id="cancelEdit" type="button" class="outline-btn">닫기</button><button type="submit" class="primary-btn">수정 내용 저장</button></div></form></div></div>
   <script src="sheets-config.js?v=2"></script>
-  <script src="sheets-db.js?v=2"></script>
-  <script src="app.js?v=3"></script>
+  <script src="sheets-db.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
