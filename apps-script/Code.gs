@@ -24,9 +24,12 @@ function doPost(e) {
   try {
     const request = JSON.parse((e.postData && e.postData.contents) || '{}');
     if (request.action === 'create') return json_(createReservation_(request.data));
+    if (request.action === 'guestReservations') return json_(guestReservations_(request.phone));
+    if (request.action === 'guestCancel') return json_(guestCancel_(request.phone, request.id));
     if (request.action === 'adminLogin') return json_({ ok: verifyAdmin_(request.password) });
     if (!verifyAdmin_(request.password)) return json_({ ok: false, message: '관리자 인증이 필요합니다.' });
     if (request.action === 'adminList') return json_({ ok: true, reservations: adminList_() });
+    if (request.action === 'updateReservation') return json_(updateReservation_(request.id, request.data));
     if (request.action === 'updateStatus') return json_(updateStatus_(request.id, request.status));
     if (request.action === 'delete') return json_(deleteReservation_(request.id));
     return json_({ ok: false, message: '지원하지 않는 요청입니다.' });
@@ -64,6 +67,32 @@ function publicAvailability_() {
   return values_(sheet_()).filter(row => row[10] !== '취소').map(row => ({ date: row[1], time: row[2], status: row[10] }));
 }
 
+function guestReservations_(phone) {
+  const normalized = normalizePhone_(phone);
+  if (!normalized) throw new Error('올바른 전화번호를 입력해 주세요.');
+  const reservations = values_(sheet_())
+    .filter(row => normalizePhone_(row[4]) === normalized && row[10] === '예약')
+    .map(row => ({ id: row[0], date: row[1], time: row[2], status: row[10] }));
+  return { ok: true, reservations: reservations };
+}
+
+function guestCancel_(phone, id) {
+  const normalized = normalizePhone_(phone);
+  if (!normalized || !id) throw new Error('전화번호와 예약 정보가 필요합니다.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = sheet_(), rows = values_(sheet);
+    const index = rows.findIndex(row => row[0] === String(id) && normalizePhone_(row[4]) === normalized);
+    if (index < 0) return { ok: false, message: '일치하는 예약을 찾을 수 없습니다.' };
+    if (rows[index][10] !== '예약') return { ok: false, message: '이미 취소되었거나 취소할 수 없는 예약입니다.' };
+    sheet.getRange(index + 2, 11).setValue('취소');
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function adminList_() {
   return values_(sheet_()).map(row => ({ id: row[0], date: row[1], time: row[2], leader: row[3], phone: row[4], studentId: row[5], department: row[6], grade: row[7], privacySignature: row[8], safetySignature: row[9], status: row[10], createdAt: row[11] }));
 }
@@ -74,6 +103,24 @@ function updateStatus_(id, status) {
   if (index < 0) return { ok: false, message: '예약을 찾을 수 없습니다.' };
   sheet.getRange(index + 2, 11).setValue(status);
   return { ok: true };
+}
+
+function updateReservation_(id, data) {
+  validateReservation_(Object.assign({}, data, { privacySignature: 'data:image/existing', safetySignature: 'data:image/existing' }));
+  if (!['예약','입장','완료','취소'].includes(data.status)) throw new Error('올바르지 않은 상태입니다.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = sheet_(), rows = values_(sheet), index = rows.findIndex(row => row[0] === id);
+    if (index < 0) return { ok: false, message: '예약을 찾을 수 없습니다.' };
+    const duplicate = rows.some((row, rowIndex) => rowIndex !== index && row[1] === data.date && row[2] === data.time && row[10] !== '취소' && data.status !== '취소');
+    if (duplicate) return { ok: false, message: '해당 시간에는 다른 예약이 있습니다.' };
+    sheet.getRange(index + 2, 2, 1, 7).setValues([[data.date, data.time, safe_(data.leader), safe_(data.phone), safe_(data.studentId), safe_(data.department), safe_(data.grade)]]);
+    sheet.getRange(index + 2, 11).setValue(data.status);
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function deleteReservation_(id) {
@@ -112,4 +159,5 @@ function sheet_() {
 }
 function values_(sheet) { const last = sheet.getLastRow(); return last < 2 ? [] : sheet.getRange(2, 1, last - 1, HEADERS.length).getDisplayValues(); }
 function safe_(value) { return String(value == null ? '' : value).slice(0, 48000); }
+function normalizePhone_(value) { const digits = String(value || '').replace(/\D/g, ''); return /^010\d{8}$/.test(digits) ? digits : ''; }
 function json_(body) { return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON); }
