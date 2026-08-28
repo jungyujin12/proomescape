@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#11100e">
+  <title>미스터리 스쿨 | 방탈출 접수</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="schedule.css">
+  <link rel="stylesheet" href="consent.css">
+  <link rel="stylesheet" href="mobile-fixes.css">
+  <link rel="stylesheet" href="admin-complete.css">
+  <link rel="stylesheet" href="admin-edit.css">
+</head>
+<body class="launch-locked">
+  <div class="noise" aria-hidden="true"></div>
+  <section id="launchGate" class="launch-gate" aria-labelledby="launchTitle">
+    <div class="launch-card">
+      <p class="launch-eyebrow">2026학년도 미래직업 진로체험 박람회</p>
+      <div class="launch-visual">
+        <div id="countdown" class="countdown clock-countdown" aria-label="접수 시작까지 남은 시간" hidden>
+          <div><strong id="countDays">00</strong><span>일</span></div>
+          <div><strong id="countHours">00</strong><span>시간</span></div>
+          <div><strong id="countMinutes">00</strong><span>분</span></div>
+          <div><strong id="countSeconds">00</strong><span>초</span></div>
+        </div>
+      </div>
+      <h1 id="launchTitle">미래직업 찾기 방탈출 접수가 곧 열립니다</h1>
+      <p id="launchMessage">접수 시작 전까지 출입이 제한됩니다.</p>
+      <p id="launchDate" class="launch-date"></p>
+      <small>한국시간(KST) 기준</small>
+    </div>
+  </section>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="미스터리 스쿨 홈">
+      <span class="brand-mark">M</span>
+      <span><strong>MYSTERY SCHOOL</strong><small>교내 방탈출 부스</small></span>
+    </a>
+    <nav class="mode-switch" aria-label="화면 선택">
+      <button class="mode-btn active" data-view="guest">접수자</button>
+      <button class="mode-btn" data-view="admin">관리자</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="guestView" class="view active">
+      <div class="hero">
+        <div class="eyebrow"><span></span> 2026학년도 미래직업 진로체험 박람회</div>
+        <h1>미래직업 찾기<br><em>방탈출</em></h1>
+        <div class="hero-meta">
+          <span><b>운영 장소</b> P관 1층</span>
+          <span><b>권장 인원</b> 2–5명</span>
+          <span><b>회차 구성</b> 체험 10분 · 정비 5분</span>
+        </div>
+      </div>
+
+      <div class="booking-layout">
+        <section class="booking-card">
+          <div class="section-number">01</div>
+          <div class="section-heading">
+            <p>RESERVATION</p>
+            <h2>도전 신청</h2>
+          </div>
+          <form id="bookingForm" novalidate>
+            <div class="field-row">
+              <label>이름 <span class="required-mark">필수</span><input id="leaderName" type="text" maxlength="12" placeholder="이름을 입력하세요" required></label>
+              <label>전화번호 <span class="required-mark">필수</span><input id="phone" type="tel" inputmode="numeric" placeholder="010-0000-0000" required></label>
+            </div>
+            <div class="field-row">
+              <label>학번 <span class="required-mark">필수</span><input id="studentId" type="text" maxlength="12" placeholder="학번을 입력하세요" required></label>
+              <label>학과 <span class="required-mark">필수</span><input id="department" type="text" maxlength="30" placeholder="예: 컴퓨터공학과" required></label>
+            </div>
+            <div class="field-row single-field"><label>학년 <span class="required-mark">필수</span><select id="grade" required><option value="" selected disabled>학년 선택</option><option>1학년</option><option>2학년</option><option>3학년</option><option>4학년</option><option>5학년 이상</option></select></label></div>
+            <label class="full-label">희망 날짜</label>
+            <div id="dateSlots" class="date-slots" role="radiogroup" aria-label="희망 날짜"></div>
+            <label class="full-label">희망 시간 <small id="timeGuide"></small></label>
+            <div id="timeSlots" class="time-slots" role="radiogroup" aria-label="희망 시간"></div>
+            <div class="consent-box">
+              <div class="consent-head"><div><b>개인정보 수집·이용 동의</b><p>수집 항목: 이름·전화번호·학번·학과·학년 / 목적: 예약 확인과 행사 운영 / 보유 기간: 행사 종료 후 7일. 동의를 거부할 수 있으나 예약 접수가 제한됩니다.</p></div><button type="button" class="clear-sign" data-clear="privacySignature">지우기</button></div>
+              <canvas id="privacySignature" class="signature-pad" aria-label="개인정보 동의 서명란"></canvas>
+              <small>위 내용에 동의하며 서명합니다. <strong>필수</strong></small>
+            </div>
+            <div class="consent-box">
+              <div class="consent-head"><div><b>안전수칙 확인 및 동의</b><p>운영요원의 안내를 따르고, 시설물을 무리하게 조작하지 않으며 본인의 건강 상태를 고려해 참여합니다.</p></div><button type="button" class="clear-sign" data-clear="safetySignature">지우기</button></div>
+              <canvas id="safetySignature" class="signature-pad" aria-label="안전수칙 동의 서명란"></canvas>
+              <small>안전수칙을 확인했으며 이에 동의합니다. <strong>필수</strong></small>
+            </div>
+            <p id="formError" class="form-error" role="alert"></p>
+            <button type="submit" class="primary-btn"><span>도전 신청하기</span><span>→</span></button>
+          </form>
+        </section>
+
+        <aside class="info-panel">
+          <div class="section-number">02</div>
+          <div class="section-heading"><p>NOTICE</p><h2>참가 안내</h2></div>
+          <ol class="rules">
+            <li><span>01</span><p><b>예약 시간 5분 전 도착</b>늦을 경우 다음 팀을 위해 참여 시간이 줄어들 수 있어요.</p></li>
+            <li><span>02</span><p><b>사진 촬영 가능</b>체험 중 자유롭게 촬영할 수 있어요.</p></li>
+          </ol>
+          <section class="guest-cancel" aria-labelledby="guestCancelTitle">
+            <p class="eyebrow-text">CANCEL RESERVATION</p>
+            <h3 id="guestCancelTitle">예약 취소</h3>
+            <p>신청할 때 입력한 전화번호로 예약을 확인하고 취소할 수 있습니다.</p>
+            <form id="guestCancelForm">
+              <label>전화번호<input id="cancelPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" required></label>
+              <button type="submit" class="outline-btn">내 예약 확인</button>
+            </form>
+            <p id="cancelError" class="form-error" role="alert"></p>
+            <div id="cancelResults" class="cancel-results" aria-live="polite"></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section id="adminView" class="view admin-view">
+      <div id="adminLogin" class="login-wrap">
+        <div class="login-card">
+          <span class="lock-icon">⌁</span>
+          <p class="eyebrow-text">STAFF ONLY</p>
+          <h2>관리자 로그인</h2>
+          <p>부스 운영진에게 공유된 관리자 비밀번호를 입력하세요.</p>
+          <form id="loginForm">
+            <label>관리자 비밀번호<input id="pinInput" type="password" autocomplete="current-password" placeholder="8자 이상"></label>
+            <p id="loginError" class="form-error" role="alert"></p>
+            <button class="primary-btn" type="submit"><span>관리 화면 열기</span><span>→</span></button>
+          </form>
+        </div>
+      </div>
+
+      <div id="dashboard" class="dashboard" hidden>
+        <div class="dashboard-head">
+          <div><p class="eyebrow-text">CONTROL ROOM</p><h1>운영 현황</h1><p id="todayText"></p></div>
+          <button id="logoutBtn" class="outline-btn">로그아웃</button>
+        </div>
+        <div class="stats">
+          <article><span>전체 예약</span><strong id="totalStat">0</strong><small>팀</small></article>
+          <article><span>대기 중</span><strong id="waitingStat">0</strong><small>팀</small></article>
+          <article><span>체험 완료</span><strong id="doneStat">0</strong><small>팀</small></article>
+          <article><span>접수 인원</span><strong id="peopleStat">0</strong><small>명</small></article>
+        </div>
+        <div class="admin-tools">
+          <div class="admin-filter-group">
+            <label class="admin-date-label">운영일<select id="adminDateFilter"><option value="all">전체 날짜</option></select></label>
+            <div class="filters" aria-label="상태 필터">
+              <button class="filter active" data-filter="all">전체</button>
+              <button class="filter" data-filter="예약">예약</button>
+              <button class="filter" data-filter="입장">입장</button>
+              <button class="filter" data-filter="완료">완료</button>
+              <button class="filter" data-filter="취소">취소</button>
+            </div>
+          </div>
+          <div class="admin-actions"><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="이름·학번·학과 검색"></label><button id="exportCsvBtn" class="outline-btn">CSV 내려받기</button></div>
+        </div>
+        <p id="resultSummary" class="result-summary" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>예약 일시</th><th>접수자</th><th>학생 정보</th><th>전화번호</th><th>동의</th><th>상태</th><th>관리</th></tr></thead>
+            <tbody id="reservationRows"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state" hidden><span>◇</span><h3>표시할 예약이 없습니다</h3><p>새로운 신청이 접수되면 이곳에 나타납니다.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="successModal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+      <span class="success-mark">✓</span>
+      <p class="eyebrow-text">RESERVATION COMPLETE</p>
+      <h2 id="successTitle">도전 신청 완료!</h2>
+      <p id="successDetail"></p>
+      <div id="reservationCode" class="reservation-code"></div>
+      <button id="closeModal" class="primary-btn">확인</button>
+    </div>
+  </div>
+  <div id="signatureModal" class="modal" hidden><div class="modal-card signature-review" role="dialog" aria-modal="true" aria-labelledby="signatureTitle"><p class="eyebrow-text">CONSENT RECORD</p><h2 id="signatureTitle">동의 서명 확인</h2><b>개인정보 수집·이용 동의</b><img id="privacySignatureImage" alt="개인정보 동의 서명"><b>안전수칙 확인 및 동의</b><img id="safetySignatureImage" alt="안전수칙 동의 서명"><button id="closeSignatureModal" class="primary-btn">닫기</button></div></div>
+  <div id="editModal" class="modal" hidden><div class="modal-card edit-reservation" role="dialog" aria-modal="true" aria-labelledby="editTitle"><p class="eyebrow-text">EDIT RESERVATION</p><h2 id="editTitle">예약 정보 수정</h2><form id="editForm"><input id="editId" type="hidden"><div class="field-row"><label>이름<input id="editLeader" required maxlength="12"></label><label>전화번호<input id="editPhone" required></label></div><div class="field-row"><label>학번<input id="editStudentId" required maxlength="12"></label><label>학과<input id="editDepartment" required maxlength="30"></label></div><div class="field-row"><label>학년<select id="editGrade" required><option value="" disabled>학년 선택</option><option>1학년</option><option>2학년</option><option>3학년</option><option>4학년</option><option>5학년 이상</option></select></label><label>상태<select id="editStatus"><option>예약</option><option>입장</option><option>완료</option><option>취소</option></select></label></div><div class="field-row"><label>예약 날짜<select id="editDate"></select></label><label>예약 시간<select id="editTime"></select></label></div><p id="editError" class="form-error"></p><div class="modal-actions"><button id="cancelEdit" type="button" class="outline-btn">닫기</button><button type="submit" class="primary-btn">수정 내용 저장</button></div></form></div></div>
+  <script src="sheets-config.js?v=2"></script>
+  <script src="sheets-db.js?v=4"></script>
+  <script src="app.js?v=6"></script>
+</body>
+</html>
