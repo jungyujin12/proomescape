@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <link rel="stylesheet" href="schedule.css">
   <link rel="stylesheet" href="consent.css">
   <link rel="stylesheet" href="mobile-fixes.css">
@@ -28,6 +28,7 @@
           <div><strong id="countSeconds">00</strong><span>초</span></div>
         </div>
       </div>
+      <button id="staffStarTrigger" class="staff-star-trigger" type="button" tabindex="-1" aria-hidden="true"></button>
       <h1 id="launchTitle">미래직업 찾기 방탈출 접수가 곧 열립니다</h1>
       <p id="launchMessage">접수 시작 전까지 출입이 제한됩니다.</p>
       <p id="launchDate" class="launch-date"></p>
@@ -180,6 +181,6 @@
   <div id="editModal" class="modal" hidden><div class="modal-card edit-reservation" role="dialog" aria-modal="true" aria-labelledby="editTitle"><p class="eyebrow-text">EDIT RESERVATION</p><h2 id="editTitle">예약 정보 수정</h2><form id="editForm"><input id="editId" type="hidden"><div class="field-row"><label>이름<input id="editLeader" required maxlength="12"></label><label>전화번호<input id="editPhone" required></label></div><div class="field-row"><label>학번<input id="editStudentId" required maxlength="12"></label><label>학과<input id="editDepartment" required maxlength="30"></label></div><div class="field-row"><label>학년<select id="editGrade" required><option value="" disabled>학년 선택</option><option>1학년</option><option>2학년</option><option>3학년</option><option>4학년</option><option>5학년 이상</option></select></label><label>상태<select id="editStatus"><option>예약</option><option>입장</option><option>완료</option><option>취소</option></select></label></div><div class="field-row"><label>예약 날짜<select id="editDate"></select></label><label>예약 시간<select id="editTime"></select></label></div><p id="editError" class="form-error"></p><div class="modal-actions"><button id="cancelEdit" type="button" class="outline-btn">닫기</button><button type="submit" class="primary-btn">수정 내용 저장</button></div></form></div></div>
   <script src="sheets-config.js?v=2"></script>
   <script src="sheets-db.js?v=4"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
