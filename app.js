@@ -11,7 +11,8 @@ if(!SheetsDB.updateReservation)SheetsDB.updateReservation=async(password,id,data
 const ADMIN_PIN='1234'; // 온라인 연결 전 로컬 미리보기 전용
 const OPERATING_HOURS={1:['13:00','17:00'],2:['09:00','17:00'],3:['09:00','17:00'],4:['09:00','17:00'],5:['09:00','12:00']};
 const SLOT_INTERVAL=15;
-let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[],staffPreviewOpen=sessionStorage.getItem('staff-preview')==='yes';
+let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[],staffPreviewOpen=false,publicSiteOpened=false;
+sessionStorage.removeItem('staff-preview');
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const getReservations=()=>window.SheetsDB&&SheetsDB.isConfigured()?reservationCache:JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
 const saveReservations=items=>{reservationCache=items;if(!window.SheetsDB||!SheetsDB.isConfigured())localStorage.setItem(STORAGE_KEY,JSON.stringify(items))};
@@ -24,16 +25,17 @@ function getLaunchPhase(now=Date.now()){
   return'waiting';
 }
 function formatKstDate(iso){return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso))}
-function openStaffEntrance(){staffPreviewOpen=true;sessionStorage.setItem('staff-preview','yes');document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin')}
-function renderLaunchGate(){
-  if(staffPreviewOpen){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin');return}
-  const phase=getLaunchPhase();
-  if(phase==='open'){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;return}
+function openStaffEntrance(){staffPreviewOpen=true;document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin')}
+function renderLaunchGate(now=Date.now()){
+  const phase=getLaunchPhase(now);
+  if(phase==='open'){staffPreviewOpen=false;document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;if(!publicSiteOpened){publicSiteOpened=true;switchView('guest')}return}
+  publicSiteOpened=false;
+  if(staffPreviewOpen){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;return}
   document.body.classList.add('launch-locked');$('#launchGate').hidden=false;
   $('#launchDate').textContent=`접수 시작 · ${formatKstDate(LAUNCH_CONFIG.bookingOpen)}`;
   if(phase==='waiting'){$('#launchTitle').textContent='잠긴 교실은 아직 공개되지 않았습니다';$('#launchMessage').textContent=`카운트다운은 ${formatKstDate(LAUNCH_CONFIG.countdownStart)}부터 시작됩니다.`;$('#countdown').hidden=true;return}
   $('#launchTitle').textContent='미래직업 찾기 방탈출 접수가 곧 열립니다';$('#launchMessage').textContent='접수 시작까지 남은 시간';$('#countdown').hidden=false;
-  const left=Math.max(0,new Date(LAUNCH_CONFIG.bookingOpen).getTime()-Date.now()),day=86400000,hour=3600000,minute=60000;
+  const left=Math.max(0,new Date(LAUNCH_CONFIG.bookingOpen).getTime()-now),day=86400000,hour=3600000,minute=60000;
   $('#countDays').textContent=String(Math.floor(left/day)).padStart(2,'0');
   $('#countHours').textContent=String(Math.floor(left%day/hour)).padStart(2,'0');
   $('#countMinutes').textContent=String(Math.floor(left%hour/minute)).padStart(2,'0');
