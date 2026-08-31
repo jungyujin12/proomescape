@@ -11,7 +11,7 @@ if(!SheetsDB.updateReservation)SheetsDB.updateReservation=async(password,id,data
 const ADMIN_PIN='1234'; // 온라인 연결 전 로컬 미리보기 전용
 const OPERATING_HOURS={1:['13:00','17:00'],2:['09:00','17:00'],3:['09:00','17:00'],4:['09:00','17:00'],5:['09:00','12:00']};
 const SLOT_INTERVAL=15;
-let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[];
+let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[],staffPreviewOpen=sessionStorage.getItem('staff-preview')==='yes';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const getReservations=()=>window.SheetsDB&&SheetsDB.isConfigured()?reservationCache:JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
 const saveReservations=items=>{reservationCache=items;if(!window.SheetsDB||!SheetsDB.isConfigured())localStorage.setItem(STORAGE_KEY,JSON.stringify(items))};
@@ -24,9 +24,9 @@ function getLaunchPhase(now=Date.now()){
   return'waiting';
 }
 function formatKstDate(iso){return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso))}
-function openStaffEntrance(){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin')}
+function openStaffEntrance(){staffPreviewOpen=true;sessionStorage.setItem('staff-preview','yes');document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin')}
 function renderLaunchGate(){
-  if(location.hash==='#staff'){openStaffEntrance();return}
+  if(staffPreviewOpen){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin');return}
   const phase=getLaunchPhase();
   if(phase==='open'){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;return}
   document.body.classList.add('launch-locked');$('#launchGate').hidden=false;
@@ -39,7 +39,8 @@ function renderLaunchGate(){
   $('#countMinutes').textContent=String(Math.floor(left%hour/minute)).padStart(2,'0');
   $('#countSeconds').textContent=String(Math.floor(left%minute/1000)).padStart(2,'0');
 }
-function initLaunchGate(){renderLaunchGate();setInterval(renderLaunchGate,1000);window.addEventListener('hashchange',renderLaunchGate)}
+function initLaunchGate(){renderLaunchGate();setInterval(renderLaunchGate,1000)}
+function initStaffStarTrigger(){const trigger=$('#staffStarTrigger');let taps=0,timer=0;trigger.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();clearTimeout(timer);taps+=1;if(taps>=5){taps=0;openStaffEntrance();return}timer=setTimeout(()=>{taps=0},3500)})}
 
 function switchView(view){$$('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$$('.view').forEach(s=>s.classList.remove('active'));$(`#${view}View`).classList.add('active');if(view==='admin'&&sessionStorage.getItem('mystery-admin')==='yes')showDashboard()}
 function getEventWeek(){const monday=new Date(`${LAUNCH_CONFIG.eventWeekStart}T12:00:00`);return Array.from({length:5},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return d})}
@@ -115,5 +116,6 @@ $('#cancelResults').addEventListener('click',async e=>{
   }catch(err){$('#cancelError').textContent=err.message||'예약을 취소하지 못했습니다.';button.disabled=false}
 });
 initLaunchGate();
+initStaffStarTrigger();
 if(window.SheetsDB&&SheetsDB.isConfigured())sessionStorage.removeItem('mystery-admin');
 setupSignature('privacySignature');setupSignature('safetySignature');renderDateSlots();renderTimeSlots();refreshAvailability();
