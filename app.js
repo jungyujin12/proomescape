@@ -11,7 +11,8 @@ if(!SheetsDB.updateReservation)SheetsDB.updateReservation=async(password,id,data
 const ADMIN_PIN='1234'; // 온라인 연결 전 로컬 미리보기 전용
 const OPERATING_HOURS={1:['13:00','17:00'],2:['09:00','17:00'],3:['09:00','17:00'],4:['09:00','17:00'],5:['09:00','12:00']};
 const SLOT_INTERVAL=15;
-let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[],staffPreviewOpen=false,publicSiteOpened=false;
+const LUNCH_START=12*60,LUNCH_END=13*60;
+let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[],staffPreviewOpen=false,publicSiteOpened=false,availabilityLoaded=false,availabilityLoading=false;
 sessionStorage.removeItem('staff-preview');
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const getReservations=()=>window.SheetsDB&&SheetsDB.isConfigured()?reservationCache:JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
@@ -44,13 +45,13 @@ function renderLaunchGate(now=Date.now()){
 function initLaunchGate(){renderLaunchGate();setInterval(renderLaunchGate,1000)}
 function initStaffStarTrigger(){const trigger=$('#staffStarTrigger');let taps=0,timer=0;trigger.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();clearTimeout(timer);taps+=1;if(taps>=5){taps=0;openStaffEntrance();return}timer=setTimeout(()=>{taps=0},3500)})}
 
-function switchView(view){$$('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$$('.view').forEach(s=>s.classList.remove('active'));$(`#${view}View`).classList.add('active');if(view==='guest')requestAnimationFrame(resizeSignatures);if(view==='admin'&&sessionStorage.getItem('mystery-admin')==='yes')showDashboard()}
+function switchView(view){$$('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$$('.view').forEach(s=>s.classList.remove('active'));$(`#${view}View`).classList.add('active');if(view==='guest'){requestAnimationFrame(resizeSignatures);ensureAvailability()}if(view==='admin'&&sessionStorage.getItem('mystery-admin')==='yes')showDashboard()}
 function getEventWeek(){const monday=new Date(`${LAUNCH_CONFIG.eventWeekStart}T12:00:00`);return Array.from({length:5},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return d})}
 function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function formatDate(key,short=false){const d=new Date(`${key}T00:00:00`),days=['일','월','화','수','목','금','토'];return short?`${d.getMonth()+1}/${d.getDate()} (${days[d.getDay()]})`:`${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`}
-function createTimes(start,end){const min=v=>{const[h,m]=v.split(':').map(Number);return h*60+m},out=[];for(let n=min(start);n+10<=min(end);n+=SLOT_INTERVAL)out.push(`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`);return out}
+function createTimes(start,end){const min=v=>{const[h,m]=v.split(':').map(Number);return h*60+m},out=[];for(let n=min(start);n+10<=min(end);n+=SLOT_INTERVAL)if(n<LUNCH_START||n>=LUNCH_END)out.push(`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`);return out}
 function renderDateSlots(){const dates=getEventWeek();if(!selectedDate)selectedDate=dateKey(dates[0]);$('#dateSlots').innerHTML=dates.map(d=>{const key=dateKey(d),day=['일','월','화','수','목','금','토'][d.getDay()];return `<button type="button" class="date-slot${selectedDate===key?' selected':''}" data-date="${key}">${day}요일<small>${d.getMonth()+1}.${d.getDate()}</small></button>`}).join('')}
-function renderTimeSlots(){if(!selectedDate)return;const weekday=new Date(`${selectedDate}T00:00:00`).getDay(),[start,end]=OPERATING_HOURS[weekday],times=createTimes(start,end);const reserved=new Set(getReservations().filter(r=>r.status!=='취소'&&r.date===selectedDate).map(r=>r.time));$('#timeGuide').textContent=`${start}–${end} · 15분 간격`;$('#timeSlots').innerHTML=times.map(time=>`<button type="button" class="time-slot${selectedTime===time?' selected':''}" data-time="${time}" ${reserved.has(time)?'disabled':''}>${time}</button>`).join('')}
+function renderTimeSlots(){if(!selectedDate)return;const weekday=new Date(`${selectedDate}T00:00:00`).getDay(),[start,end]=OPERATING_HOURS[weekday],times=createTimes(start,end),spansLunch=start<'13:00'&&end>'12:00';const reserved=new Set(getReservations().filter(r=>r.status!=='취소'&&r.date===selectedDate).map(r=>r.time));$('#timeGuide').textContent=`${start}–${end} · 15분 간격${spansLunch?' · 점심 12:00–13:00 제외':''}`;$('#timeSlots').innerHTML=times.map(time=>`<button type="button" class="time-slot${selectedTime===time?' selected':''}" data-time="${time}" ${reserved.has(time)?'disabled':''}>${time}</button>`).join('')}
 function normalizePhone(value){const d=value.replace(/\D/g,'').slice(0,11);if(d.length<4)return d;if(d.length<8)return`${d.slice(0,3)}-${d.slice(3)}`;return`${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`}
 
 async function findGuestReservations(phone){
@@ -90,7 +91,8 @@ $('#signatureModal').addEventListener('click',e=>{if(e.target===e.currentTarget)
 function exportReservations(){const items=getReservations().filter(r=>(selectedAdminDate==='all'||r.date===selectedAdminDate)&&(activeFilter==='all'||r.status===activeFilter));if(!items.length){alert('내려받을 예약이 없습니다.');return}const header=['예약번호','날짜','시간','이름','전화번호','학번','학과','학년','상태','접수시각'];const rows=items.map(r=>[r.id,r.date,r.time,r.leader,r.phone,r.studentId||'',r.department||'',r.grade||'',r.status,r.createdAt]);const csv='\uFEFF'+[header,...rows].map(row=>row.map(value=>`"${String(value??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`방탈출_예약명단_${selectedAdminDate==='all'?'전체':selectedAdminDate}.csv`;link.click();URL.revokeObjectURL(url)}
 $('#adminDateFilter').addEventListener('change',e=>{selectedAdminDate=e.target.value;renderDashboard()});
 $('#exportCsvBtn').addEventListener('click',exportReservations);
-async function refreshAvailability(){if(!window.SheetsDB||!SheetsDB.isConfigured())return;try{reservationCache=await SheetsDB.availability();renderTimeSlots()}catch(error){$('#formError').textContent='예약 현황을 불러오지 못했습니다. 잠시 후 새로고침해 주세요.'}}
+function ensureAvailability(){if(availabilityLoaded||availabilityLoading||!window.SheetsDB||!SheetsDB.isConfigured())return;availabilityLoading=true;refreshAvailability().finally(()=>availabilityLoading=false)}
+async function refreshAvailability(){if(!window.SheetsDB||!SheetsDB.isConfigured())return;try{reservationCache=await SheetsDB.availability();availabilityLoaded=true;renderTimeSlots()}catch(error){$('#formError').textContent='예약 현황을 불러오지 못했습니다. 잠시 후 새로고침해 주세요.'}}
 async function loadAdminReservations(){if(!SheetsDB.isConfigured())return;const result=await SheetsDB.adminList(adminPassword);reservationCache=result.reservations;renderDashboard();renderTimeSlots()}
 $('#loginForm').addEventListener('submit',async e=>{if(!SheetsDB.isConfigured())return;e.preventDefault();e.stopImmediatePropagation();const button=e.currentTarget.querySelector('button');adminPassword=$('#pinInput').value;button.disabled=true;$('#loginError').textContent='';try{await SheetsDB.adminLogin(adminPassword);sessionStorage.setItem('mystery-admin','yes');showDashboard();await loadAdminReservations()}catch(error){sessionStorage.removeItem('mystery-admin');$('#loginError').textContent=error.message||'관리자 인증에 실패했습니다.'}finally{button.disabled=false}},true);
 $('#reservationRows').addEventListener('change',async e=>{if(!SheetsDB.isConfigured()||!e.target.matches('.status-select'))return;e.stopImmediatePropagation();const previous=getReservations().find(r=>r.id===e.target.dataset.id)?.status;e.target.disabled=true;try{await SheetsDB.updateStatus(adminPassword,e.target.dataset.id,e.target.value);await loadAdminReservations()}catch(error){alert(error.message);e.target.value=previous||'예약'}finally{e.target.disabled=false}},true);
@@ -118,7 +120,6 @@ $('#cancelResults').addEventListener('click',async e=>{
     await refreshAvailability();await lookupGuestReservations();alert('예약이 취소되었습니다.');
   }catch(err){$('#cancelError').textContent=err.message||'예약을 취소하지 못했습니다.';button.disabled=false}
 });
-initLaunchGate();
-initStaffStarTrigger();
+setupSignature('privacySignature');setupSignature('safetySignature');renderDateSlots();renderTimeSlots();
+initLaunchGate();initStaffStarTrigger();
 if(window.SheetsDB&&SheetsDB.isConfigured())sessionStorage.removeItem('mystery-admin');
-setupSignature('privacySignature');setupSignature('safetySignature');renderDateSlots();renderTimeSlots();refreshAvailability();
