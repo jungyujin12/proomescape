@@ -7,6 +7,8 @@ const LAUNCH_CONFIG={
   bookingOpen:'2026-09-07T10:00:00+09:00',
   eventWeekStart:'2026-09-14'
 };
+// 현장접수 종료 후 온라인 예약을 다시 열려면 'online'으로 변경하세요.
+const SITE_MODE='onsite';
 if(!SheetsDB.updateReservation)SheetsDB.updateReservation=async(password,id,data)=>{const response=await fetch(window.SHEETS_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'updateReservation',password,id,data}),redirect:'follow'}),result=await response.json();if(!result.ok)throw new Error(result.message||'수정하지 못했습니다.');return result};
 const ADMIN_PIN='1234'; // 온라인 연결 전 로컬 미리보기 전용
 const OPERATING_HOURS={1:['13:00','17:00'],2:['09:00','17:00'],3:['09:00','17:00'],4:['09:00','17:00'],5:['09:00','12:00']};
@@ -14,6 +16,10 @@ const SLOT_INTERVAL=15;
 const SLOT_CAPACITY=4;
 const LUNCH_START=12*60,LUNCH_END=13*60;
 let selectedTime='',selectedDate='',activeFilter='all',selectedAdminDate='all',adminPassword='',reservationCache=[],staffPreviewOpen=false,publicSiteOpened=false,availabilityLoaded=false,availabilityLoading=false;
+if(SITE_MODE==='onsite'&&window.SheetsDB&&SheetsDB.isConfigured()){
+  const authenticatedCreate=SheetsDB.create;
+  SheetsDB.create=data=>authenticatedCreate(adminPassword,data);
+}
 sessionStorage.removeItem('staff-preview');
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const getReservations=()=>window.SheetsDB&&SheetsDB.isConfigured()?reservationCache:JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
@@ -29,6 +35,16 @@ function getLaunchPhase(now=Date.now()){
 function formatKstDate(iso){return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso))}
 function openStaffEntrance(){staffPreviewOpen=true;document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;switchView('admin')}
 function renderLaunchGate(now=Date.now()){
+  if(SITE_MODE==='onsite'){
+    if(staffPreviewOpen){document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;return}
+    document.body.classList.add('launch-locked');$('#launchGate').hidden=false;
+    $('#countdown').hidden=true;$('#onsiteNotice').hidden=false;
+    $('#launchTitle').textContent='미래직업 찾기 방탈출 현장접수 진행 중';
+    $('#launchMessage').textContent='온라인 예약은 종료되었습니다.';
+    $('#launchDate').textContent='참가를 원하시면 P관 1층 운영 부스로 방문해 주세요.';
+    return;
+  }
+  $('#onsiteNotice').hidden=true;
   const phase=getLaunchPhase(now);
   if(phase==='open'){staffPreviewOpen=false;document.body.classList.remove('launch-locked');$('#launchGate').hidden=true;if(!publicSiteOpened){publicSiteOpened=true;switchView('guest')}return}
   publicSiteOpened=false;
@@ -43,7 +59,7 @@ function renderLaunchGate(now=Date.now()){
   $('#countMinutes').textContent=String(Math.floor(left%hour/minute)).padStart(2,'0');
   $('#countSeconds').textContent=String(Math.floor(left%minute/1000)).padStart(2,'0');
 }
-function initLaunchGate(){renderLaunchGate();setInterval(renderLaunchGate,1000)}
+function initLaunchGate(){renderLaunchGate();if(SITE_MODE==='online')setInterval(renderLaunchGate,1000)}
 function initStaffStarTrigger(){const trigger=$('#staffStarTrigger');let taps=0,timer=0;trigger.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();clearTimeout(timer);taps+=1;if(taps>=5){taps=0;openStaffEntrance();return}timer=setTimeout(()=>{taps=0},3500)})}
 
 function switchView(view){$$('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$$('.view').forEach(s=>s.classList.remove('active'));$(`#${view}View`).classList.add('active');if(view==='guest'){requestAnimationFrame(resizeSignatures);ensureAvailability()}if(view==='admin'&&sessionStorage.getItem('mystery-admin')==='yes')showDashboard()}
@@ -85,6 +101,8 @@ async function submitBooking(event){event.preventDefault();const form=event.curr
 function showDashboard(){$('#adminLogin').hidden=true;$('#dashboard').hidden=false;const now=new Date();$('#todayText').textContent=`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 · 실시간 예약 관리`;const dates=getEventWeek();$('#adminDateFilter').innerHTML='<option value="all">전체 날짜</option>'+dates.map(d=>`<option value="${dateKey(d)}">${formatDate(dateKey(d))}</option>`).join('');$('#adminDateFilter').value=selectedAdminDate;renderDashboard()}
 function renderDashboard(){const items=getReservations(),query=$('#searchInput').value.trim().toLowerCase();const filtered=items.filter(r=>(selectedAdminDate==='all'||r.date===selectedAdminDate)&&(activeFilter==='all'||r.status===activeFilter)&&(!query||r.leader.toLowerCase().includes(query)||(r.studentId||'').toLowerCase().includes(query)||(r.department||'').toLowerCase().includes(query)||(r.phone||'').includes(query))).sort((a,b)=>`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));$('#totalStat').textContent=items.length;$('#waitingStat').textContent=items.filter(r=>r.status==='예약').length;$('#doneStat').textContent=items.filter(r=>r.status==='완료').length;$('#peopleStat').textContent=items.filter(r=>r.status!=='취소').length;$('#resultSummary').textContent=`조건에 맞는 예약 ${filtered.length}건`;$('#reservationRows').innerHTML=filtered.map(r=>{const student=[r.studentId,r.department,r.grade].filter(Boolean).map(escapeHtml).join(' · ')||'학생 정보 미입력';return `<tr><td><strong>${formatDate(r.date,true)} ${r.time}</strong></td><td class="team-cell"><strong>${escapeHtml(r.leader)}</strong><small>${r.id}</small></td><td>${student}</td><td>${escapeHtml(r.phone)}</td><td><button class="view-signatures" data-signatures="${r.id}">서명 보기</button></td><td><select class="status-select" data-status="${r.status}" data-id="${r.id}" aria-label="${escapeHtml(r.leader)} 상태"><option ${r.status==='예약'?'selected':''}>예약</option><option ${r.status==='입장'?'selected':''}>입장</option><option ${r.status==='완료'?'selected':''}>완료</option><option ${r.status==='취소'?'selected':''}>취소</option></select></td><td><button class="delete-btn" data-delete="${r.id}">삭제</button></td></tr>`}).join('');$('#emptyState').hidden=filtered.length>0}
 
+$('#reservationRows').addEventListener('change',e=>{if(window.SheetsDB&&SheetsDB.isConfigured()||!e.target.matches('.status-select'))return;e.stopImmediatePropagation();const items=getReservations(),target=items.find(r=>r.id===e.target.dataset.id);if(!target)return;const next=e.target.value,phoneKey=(target.phone||'').replace(/\D/g,''),studentKey=(target.studentId||'').trim();if(next!=='취소'&&items.some(r=>r.id!==target.id&&r.status!=='취소'&&((r.phone||'').replace(/\D/g,'')===phoneKey||(r.studentId||'').trim()===studentKey))){alert('같은 전화번호 또는 학번의 활성 예약이 있어 상태를 변경할 수 없습니다.');e.target.value=target.status;return}if(next!=='취소'&&items.filter(r=>r.id!==target.id&&r.status!=='취소'&&r.date===target.date&&r.time===target.time).length>=SLOT_CAPACITY){alert('해당 시간은 정원 4명이 마감되었습니다.');e.target.value=target.status;return}target.status=next;saveReservations(items);renderDashboard();renderTimeSlots()},true)
+
 $$('.mode-btn').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));$('#timeSlots').addEventListener('click',e=>{const b=e.target.closest('.time-slot');if(!b)return;selectedTime=b.dataset.time;renderTimeSlots()});$('#dateSlots').addEventListener('click',e=>{const b=e.target.closest('.date-slot');if(!b)return;selectedDate=b.dataset.date;selectedTime='';renderDateSlots();renderTimeSlots()});$('#phone').addEventListener('input',e=>e.target.value=normalizePhone(e.target.value));$('#bookingForm').addEventListener('submit',submitBooking);$('#closeModal').addEventListener('click',()=>$('#successModal').hidden=true);$('#successModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.hidden=true});$('#loginForm').addEventListener('submit',e=>{e.preventDefault();if($('#pinInput').value===ADMIN_PIN){sessionStorage.setItem('mystery-admin','yes');$('#loginError').textContent='';showDashboard()}else $('#loginError').textContent='PIN이 올바르지 않습니다.'});$('#logoutBtn').addEventListener('click',()=>{sessionStorage.removeItem('mystery-admin');$('#dashboard').hidden=true;$('#adminLogin').hidden=false;$('#pinInput').value=''});$$('.filter').forEach(b=>b.addEventListener('click',()=>{activeFilter=b.dataset.filter;$$('.filter').forEach(x=>x.classList.toggle('active',x===b));renderDashboard()}));$('#searchInput').addEventListener('input',renderDashboard);$('#reservationRows').addEventListener('change',e=>{if(!e.target.matches('.status-select'))return;const items=getReservations(),target=items.find(r=>r.id===e.target.dataset.id);if(target){const next=e.target.value,phoneKey=(target.phone||'').replace(/\D/g,''),studentKey=(target.studentId||'').trim();if(next!=='취소'&&items.some(r=>r.id!==target.id&&r.status!=='취소'&&(((r.phone||'').replace(/\D/g,'')===phoneKey)||((r.studentId||'').trim()===studentKey)))){alert('같은 전화번호 또는 학번의 활성 예약이 있어 상태를 변경할 수 없습니다.');e.target.value=target.status;return}if(next!=='취소'&&items.some(r=>r.id!==target.id&&r.status!=='취소'&&r.date===target.date&&r.time===target.time)){alert('해당 시간에는 다른 예약이 있어 상태를 변경할 수 없습니다.');e.target.value=target.status;return}target.status=next;saveReservations(items);renderDashboard();renderTimeSlots()}});$('#reservationRows').addEventListener('click',e=>{const id=e.target.dataset.delete;if(id&&confirm('이 예약을 삭제할까요?')){saveReservations(getReservations().filter(r=>r.id!==id));renderDashboard();renderTimeSlots()}});$$('.clear-sign').forEach(b=>b.addEventListener('click',()=>signatures[b.dataset.clear].clear()));
 $('#reservationRows').addEventListener('click',e=>{const id=e.target.dataset.signatures;if(!id)return;const item=getReservations().find(r=>r.id===id);if(!item)return;$('#privacySignatureImage').src=item.privacySignature||'';$('#safetySignatureImage').src=item.safetySignature||'';$('#signatureModal').hidden=false});
 $('#closeSignatureModal').addEventListener('click',()=>$('#signatureModal').hidden=true);
@@ -122,5 +140,12 @@ $('#cancelResults').addEventListener('click',async e=>{
   }catch(err){$('#cancelError').textContent=err.message||'예약을 취소하지 못했습니다.';button.disabled=false}
 });
 setupSignature('privacySignature');setupSignature('safetySignature');renderDateSlots();renderTimeSlots();
+$('#bookingForm').addEventListener('submit',event=>{
+  if(SITE_MODE==='onsite'&&SheetsDB.isConfigured()&&!adminPassword){
+    event.preventDefault();event.stopImmediatePropagation();
+    $('#formError').textContent='현장접수는 관리자 로그인 후 이용해 주세요.';
+  }
+},true);
+$('#logoutBtn').addEventListener('click',()=>{adminPassword=''});
 initLaunchGate();initStaffStarTrigger();
 if(window.SheetsDB&&SheetsDB.isConfigured())sessionStorage.removeItem('mystery-admin');
